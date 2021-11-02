@@ -1,0 +1,9 @@
+{
+  "7.62x39mm": [
+    {
+      "_comment": "This is for the bullet 7.62 x 39mm sized bullet",
+      "bullet_weight": "8g",
+      "bullet_speed": "710m/s"
+    }
+  ]
+}
