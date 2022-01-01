@@ -1,9 +1,17 @@
-from machine import Pin
-from time import sleep
+from pyb import I2C
+import logging
 
-led = Pin(2, Pin.OUT)
+class OLED:
+  def __init__(self):
+    try:
+        global i2c_con = I2C(1, I2C.CONTROLLER)
+    except:
+      # Load Json Error Message Here
+      logging.error("Random Error Message")
 
-while True:
-  led.value(not led.value())
-  sleep(0.5)
-# MATH FUNCTIONS
+  def write_data(string):
+    i2c_con.mem_write()
+
+  def reset():
+    i2c_con.mem_write()
+
