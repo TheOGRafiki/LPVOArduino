@@ -10,7 +10,7 @@ class range_finder():
   def __init__(self):
     try:
       LED.blink(True)
-      baudrate = 9600
+      baudrate = 115200
       bits = 8
       paritiy = None
       flow = 0
