@@ -1,6 +1,6 @@
 from pyb import UART
 import numpy as np
-from light import LED
+from light import light
 
 class range_finder():
   uart_obj = UART(1)
@@ -9,7 +9,7 @@ class range_finder():
 
   def __init__(self):
     try:
-      LED.blink(True)
+      light.blink(True)
       baudrate = 115200
       bits = 8
       paritiy = None

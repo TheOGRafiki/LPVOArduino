@@ -1,12 +1,12 @@
 from pyb import I2C
-from light import LED
+from light import light
 
 class display(self):
     i2c_obj = I2C(X)
     devices = "Empty"
 
     def __init__(self):
-      LED.blink(True)
+      light.blink(True)
       try:
         i2c_obj.init(I2C.CONTROLLER, baudrate="9600")
         devices = i2c_obj.scan()
