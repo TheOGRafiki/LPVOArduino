@@ -1,19 +1,19 @@
 # TEST CONNECTIONS
-def init_i2c():{}
-def init_uart():{}
-def init_adc():{}
-def init_ble():{}
-def init_connections():{}
+from light import light
+from display import display
+from range_finder import range_finder
 
-# Test load everything to max value
-def full_load():{}
+test_led = light()
+test_led.test()
 
-from machine import Pin
-from time import sleep
+# Button Click to Continue
 
-led = Pin(2, Pin.OUT)
+test_display = display()
+test_display.test_display()
 
-while True:
-  led.value(not led.value())
-  sleep(0.5)
-# MATH FUNCTIONS
+# Button Click to Continue
+
+test_rangefinder = range_finder()
+test_rangefinder.test_rangefinder()
+
+
