@@ -7,14 +7,24 @@
 const int buttonPin = 2;
 const int rangefinderTx = 4;
 const int rangefinderRx = 3;
+
 /* Constructor */
 U8X8_SSD1306_128X64_NONAME_4W_SW_SPI u8x8(/* clock=*/ 13, /* data=*/ 11, /* cs=*/ 8, /* dc=*/ A0, /* reset=*/ 9);
 SoftwareSerial Rangefinder(/*RX*/rangefinderRx, /*TX*/rangefinderTx);
 
+/* Button Debounce Paramas*/
 volatile long lastDebounceTime = 0;
 volatile long debounceDelay = 50;
 
+/* States of button and display */
+volatile char* textDisplay;
 volatile bool buttonState = false; /* False = Not Pressed  True = Pressed*/
+
+
+// JSON Objects
+
+M4_CARBINE = {}
+
 
 void setup(void)
 {
@@ -30,7 +40,7 @@ void setup(void)
 }
 
 void loop(void) { 
-  u8x8.drawString(1, 3, "Waiting For Button Press");
+  u8x8.drawString(1, 3, textDisplay);
   delay(1000);
 }
 
@@ -48,6 +58,7 @@ void range() {
 
       for(int i = 0; i < 7; i++) {
         Serial.print((char)Rangefinder.read());
+        textDisplay[i] = (char)Rangefinder.read();
       }
       Serial.println(); 
 
@@ -56,4 +67,17 @@ void range() {
 
       lastDebounceTime = millis();
     }
+  }
+
+  void calcMOA() {
+      // Used to determine Angle
+      // Bullet Drop in Inches / MOA Inches at distance = MOA Adjustment needed 
+      // 1 MOA = 1/60TH Of a degree
+      // 800 Yards => 8 INCHES MOA 
+  }
+
+  void calcFallOff() {
+
+    // Used to determine fall off function
+    // Use Pejsa 
   }
