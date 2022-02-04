@@ -20,14 +20,7 @@ volatile long debounceDelay = 50;
 volatile char* textDisplay;
 volatile bool buttonState = false; /* False = Not Pressed  True = Pressed*/
 
-
-// JSON Objects
-
-M4_CARBINE = {}
-
-
-void setup(void)
-{
+void setup(void) {
   u8x8.begin();
 
   pinMode(buttonPin, INPUT_PULLUP);
@@ -40,7 +33,11 @@ void setup(void)
 }
 
 void loop(void) { 
-  u8x8.drawString(1, 3, textDisplay);
+  // u8x8.drawString(1, 3, textDisplay);
+  Serial.println(calcFallOff(1000, 2320), 4);
+  // Serial.println(u8x8.getRows());
+  // Serial.println(u8x8.getCols());
+
   delay(1000);
 }
 
@@ -57,8 +54,7 @@ void range() {
       Serial.print("Data Read: "); 
 
       for(int i = 0; i < 7; i++) {
-        Serial.print((char)Rangefinder.read());
-        textDisplay[i] = (char)Rangefinder.read();
+        Serial.print(Rangefinder.parseInt());
       }
       Serial.println(); 
 
@@ -69,15 +65,43 @@ void range() {
     }
   }
 
-  void calcMOA() {
-      // Used to determine Angle
-      // Bullet Drop in Inches / MOA Inches at distance = MOA Adjustment needed 
-      // 1 MOA = 1/60TH Of a degree
-      // 800 Yards => 8 INCHES MOA 
-  }
+float calcFallOff(float range, float velocity) {
 
-  void calcFallOff() {
+  const float varG = 41.697;
+  const float varN = 0.5;
+  const long varFzero = 3230;
 
-    // Used to determine fall off function
-    // Use Pejsa 
-  }
+  float varFm = (float)varFzero - (float)(0.75 + 0.00006 * range) * (float)(varN * range);
+
+  // Denominator First
+  float recipRange = 1.00/range;
+  float recipMultiply = 1.00/(varFm);
+
+  float denominator = recipRange - recipMultiply;
+
+  Serial.print("Denom: ");
+  Serial.println(denominator, 6);
+  // Numerator
+
+  float numerator = varG/float(velocity);
+
+  Serial.print("Numerator: ");
+  Serial.println(numerator, 6);
+
+  Serial.print("Final: ");
+
+  float varD = (float)(numerator / denominator);
+  varD *= varD;
+  varD /= 12;
+
+  return varD;
+}
+
+float calcAngle(float drop, float distance) {
+
+  float dropAngleRads = atan2f(drop, distance);
+
+  float dropAngleDegs = (dropAngleRads * 4068) / 71;
+
+  return dropAngleDegs;
+}
