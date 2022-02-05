@@ -17,7 +17,6 @@ volatile long lastDebounceTime = 0;
 volatile long debounceDelay = 50;
 
 /* States of button and display */
-volatile char* textDisplay;
 volatile bool buttonState = false; /* False = Not Pressed  True = Pressed*/
 
 void setup(void) {
@@ -30,20 +29,89 @@ void setup(void) {
   u8x8.setFont(u8x8_font_chroma48medium8_r);
   
   Rangefinder.begin(115200);
+
+  // Loading Screen
+  displayStart();
+
+  // Test Components 
+  displayLoad();
 }
 
 void loop(void) { 
-  // u8x8.drawString(1, 3, textDisplay);
-  Serial.println(calcFallOff(1000, 2320), 4);
-  // Serial.println(u8x8.getRows());
-  // Serial.println(u8x8.getCols());
+}
 
-  delay(1000);
+void displayStart() {
+  for(int i = 0; i < u8x8.getCols(); i++) {
+
+    for(int j = 0; j < u8x8.getRows(); j++) {
+      
+      uint8_t tiles[16] = { 0x0f,0x0f,0x0f,0x0f,0xf0,0xf0,0xf0,0xf0, 1, 3, 7, 15, 31, 63, 127, 255};
+      u8x8.drawTile(i, j, 1, tiles);
+      delay(50);
+    }
+    delay(150);
+  }
+
+  u8x8.clearDisplay();
+  delay(100);
+  
+  u8x8.drawString(1, 3, "Starting...");
+  delay(700);
+  u8x8.clearDisplay();
+}
+
+void displayLoad() {
+  u8x8.drawString(0, 0, "Screen: ");
+
+  for(int i = 7; i < u8x8.getCols() - 1; i++) {
+      u8x8.drawString(i,0, "%");
+      delay(50);
+  } 
+
+  u8x8.drawString(0, 1, "Range: ");
+  
+  for(int i = 7; i < u8x8.getCols() - 1; i++) {
+        u8x8.drawString(i,1, "%");
+        delay(50);
+  } 
+
+  u8x8.drawString(0, 2, "Button: ");
+  
+  for(int i = 7; i < u8x8.getCols() - 1; i++) {
+        u8x8.drawString(i,2, "%");
+        delay(50);
+  } 
+
+  u8x8.drawString(2, 5, "Press Button");
+  u8x8.drawString(4, 6, "To Start");
+
+
+}
+
+
+void readRange() {
+    const unsigned char startCommand[] = {0xD, 0xA, 0x4F, 0x4E, 0xD, 0xA};
+    const unsigned char stopCommand[] = {0xD, 0xA, 0x4F, 0x46, 0x46, 0xD, 0xA};
+
+    /* Start Command*/
+    Rangefinder.write(startCommand, 6);
+    u8x8.drawString(1, 3, "Range Finder Active");
+
+    Serial.print("Data Read: "); 
+
+    for(int i = 0; i < 7; i++) {
+      Serial.print((char)Rangefinder.read());
+    }
+    Serial.println(); 
+
+    // u8x8.drawString()
+    Rangefinder.write(stopCommand, 7);
 }
 
 void range() { 
   if((millis() - lastDebounceTime) > debounceDelay) {
-      buttonState = !buttonState; 
+      buttonState = !buttonState;
+
       const unsigned char startCommand[] = {0xD, 0xA, 0x4F, 0x4E, 0xD, 0xA};
       const unsigned char stopCommand[] = {0xD, 0xA, 0x4F, 0x46, 0x46, 0xD, 0xA};
 
@@ -54,7 +122,14 @@ void range() {
       Serial.print("Data Read: "); 
 
       for(int i = 0; i < 7; i++) {
-        Serial.print(Rangefinder.parseInt());
+        char c = Rangefinder.read();
+
+        if(c == NULL) {
+          u8x8.drawString(1,3,"NULL VAL");
+          return;
+        }
+
+        Serial.print(c);
       }
       Serial.println(); 
 
@@ -79,16 +154,10 @@ float calcFallOff(float range, float velocity) {
 
   float denominator = recipRange - recipMultiply;
 
-  Serial.print("Denom: ");
-  Serial.println(denominator, 6);
   // Numerator
-
   float numerator = varG/float(velocity);
 
-  Serial.print("Numerator: ");
-  Serial.println(numerator, 6);
-
-  Serial.print("Final: ");
+  // Final 
 
   float varD = (float)(numerator / denominator);
   varD *= varD;
