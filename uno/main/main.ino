@@ -15,7 +15,6 @@ SoftwareSerial Rangefinder(/*RX*/rangefinderRx, /*TX*/rangefinderTx);
 /* Button Debounce Paramas*/
 volatile long lastDebounceTime = 0;
 volatile long debounceDelay = 50;
-volatile long bulletSpeed = 2320;
 
 /* States of button and display */
 volatile bool buttonState = false; /* False = Not Pressed  True = Pressed*/
@@ -85,53 +84,61 @@ void displayLoad() {
 
   u8x8.drawString(2, 5, "Press Button");
   u8x8.drawString(4, 6, "To Start");
+
+
 }
 
 
+void readRange() {
+    const unsigned char startCommand[] = {0xD, 0xA, 0x4F, 0x4E, 0xD, 0xA};
+    const unsigned char stopCommand[] = {0xD, 0xA, 0x4F, 0x46, 0x46, 0xD, 0xA};
+
+    /* Start Command*/
+    Rangefinder.write(startCommand, 6);
+    u8x8.drawString(1, 3, "Range Finder Active");
+
+    Serial.print("Data Read: "); 
+
+    for(int i = 0; i < 7; i++) {
+      Serial.print((char)Rangefinder.read());
+    }
+    Serial.println(); 
+
+    // u8x8.drawString()
+    Rangefinder.write(stopCommand, 7);
+}
+
 void range() { 
-  // Check for button Debounce
   if((millis() - lastDebounceTime) > debounceDelay) {
-      u8x8.clearDisplay();
+      buttonState = !buttonState;
+
       const unsigned char startCommand[] = {0xD, 0xA, 0x4F, 0x4E, 0xD, 0xA};
       const unsigned char stopCommand[] = {0xD, 0xA, 0x4F, 0x46, 0x46, 0xD, 0xA};
 
-      if(buttonState == true) {
-        lastDebounceTime = millis();
+      /* Start Command*/
+      Rangefinder.write(startCommand, 6);
+      u8x8.drawString(1, 3, "Range Finder Active");
 
-        Rangefinder.write(stopCommand, 7);
-        Serial.println(buttonState);
-      } 
-      else if(buttonState == false) {
-        lastDebounceTime = millis();
+      Serial.print("Data Read: "); 
 
-        u8x8.drawString(1, 3, "Lasing");
-        Rangefinder.write(startCommand, 6);
+      for(int i = 0; i < 7; i++) {
+        char c = Rangefinder.read();
 
-        Serial.print("Data Read: ");
+        if(c == NULL) {
+          u8x8.drawString(1,3,"NULL VAL");
+          return;
+        }
 
-        char tempBuff[7]; 
+        Serial.print(c);
+      }
+      Serial.println(); 
 
-        for(int i = 0; i < 7; i++) {
-          char c = Rangefinder.read();
-          tempBuff[i] = c;
-          Serial.print(c);
-        } 
-        Serial.println(); 
-        Serial.println(buttonState);
+      // u8x8.drawString()
+      Rangefinder.write(stopCommand, 7);
 
-        u8x8.clearDisplay();
-        u8x8.drawString(1, 3, tempBuff);
-
-        float range = handleString(tempBuff);
-        calcFallOff(range, bulletSpeed);
-      } 
-      buttonState != buttonState;
+      lastDebounceTime = millis();
     }
   }
-
-float handleString(char* inputString) {
-  return 500.00;
-}
 
 float calcFallOff(float range, float velocity) {
 
