@@ -17,7 +17,11 @@ volatile long lastDebounceTime = 0;
 volatile long debounceDelay = 50;
 
 /* States of button and display */
-volatile bool buttonState = false; /* False = Not Pressed  True = Pressed*/
+volatile int buttonState = 0; /* False = Not Pressed  True = Pressed*/
+
+/* Range Finder Commands */
+const unsigned char turnOnCommand[] = {0xD, 0xA, 0x4F, 0x4E, 0xD, 0xA};
+const unsigned char turnOffCommand[] = {0xD, 0xA, 0x4F, 0x46, 0x46 ,0xD, 0xA};
 
 void setup(void) {
   u8x8.begin();
@@ -38,6 +42,12 @@ void setup(void) {
 }
 
 void loop(void) { 
+  // char* tempBuff = buttonState;
+  Serial.println(buttonState);
+  while(buttonState == 0) {}
+
+  readRange();
+  delay(1000);
 }
 
 void displayStart() {
@@ -88,55 +98,31 @@ void displayLoad() {
 
 }
 
-
 void readRange() {
-    const unsigned char startCommand[] = {0xD, 0xA, 0x4F, 0x4E, 0xD, 0xA};
-    const unsigned char stopCommand[] = {0xD, 0xA, 0x4F, 0x46, 0x46, 0xD, 0xA};
-
     /* Start Command*/
-    Rangefinder.write(startCommand, 6);
-    u8x8.drawString(1, 3, "Range Finder Active");
+    while(Rangefinder.availableForWrite() != 6) {}
 
+    Rangefinder.write(turnOnCommand, 6);
+    
+    Serial.println("Range Finder Start");
     Serial.print("Data Read: "); 
 
-    for(int i = 0; i < 7; i++) {
-      Serial.print((char)Rangefinder.read());
+    while(Rangefinder.available() > 0) {
+      char c = Rangefinder.read();
+      Serial.print(c);
+      if(c == "m") break;
     }
     Serial.println(); 
 
-    // u8x8.drawString()
-    Rangefinder.write(stopCommand, 7);
+    while(Rangefinder.availableForWrite() != 7) {}
+    Rangefinder.write(turnOffCommand, 7);
 }
 
 void range() { 
-  if((millis() - lastDebounceTime) > debounceDelay) {
-      buttonState = !buttonState;
-
-      const unsigned char startCommand[] = {0xD, 0xA, 0x4F, 0x4E, 0xD, 0xA};
-      const unsigned char stopCommand[] = {0xD, 0xA, 0x4F, 0x46, 0x46, 0xD, 0xA};
-
-      /* Start Command*/
-      Rangefinder.write(startCommand, 6);
-      u8x8.drawString(1, 3, "Range Finder Active");
-
-      Serial.print("Data Read: "); 
-
-      for(int i = 0; i < 7; i++) {
-        char c = Rangefinder.read();
-
-        if(c == NULL) {
-          u8x8.drawString(1,3,"NULL VAL");
-          return;
-        }
-
-        Serial.print(c);
-      }
-      Serial.println(); 
-
-      // u8x8.drawString()
-      Rangefinder.write(stopCommand, 7);
-
-      lastDebounceTime = millis();
+    if(buttonState == 0) {
+      buttonState++;
+    } else {
+      buttonState--;
     }
   }
 
