@@ -23,26 +23,29 @@ volatile int buttonState = 0; /* False = Not Pressed  True = Pressed*/
 const unsigned char turnOnCommand[] = {0xD, 0xA, 0x4F, 0x4E, 0xD, 0xA};
 const unsigned char turnOffCommand[] = {0xD, 0xA, 0x4F, 0x46, 0x46 ,0xD, 0xA};
 
+/* ------------------------------------- SETUP ------------------------------------- */
 void setup(void) {
   u8x8.begin();
+  u8x8.setFont(u8x8_font_chroma48medium8_r);
+
+  Rangefinder.begin(115200);
+  Serial.begin(115200);
 
   pinMode(buttonPin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(buttonPin), range, RISING);
-
-  Serial.begin(115200);
-  u8x8.setFont(u8x8_font_chroma48medium8_r);
   
-  Rangefinder.begin(115200);
-
   // Loading Screen
-  displayStart();
+  displayCheckerBoard();
 
   // Test Components 
   displayLoad();
+
+  // Attach Interupts
+  attachInterrupt(digitalPinToInterrupt(buttonPin), changeState, RISING);
 }
 
+/* ------------------------------------- MAIN LOOP ------------------------------------- */
 void loop(void) { 
-  // char* tempBuff = buttonState;
+
   Serial.println(buttonState);
   while(buttonState == 0) {}
 
@@ -50,13 +53,28 @@ void loop(void) {
   delay(1000);
 }
 
-void displayStart() {
-  for(int i = 0; i < u8x8.getCols(); i++) {
+/* ------------------------------------- ISR FUNCTION ------------------------------------- */
+void changeState(void)
+{
+  if (buttonState == 0)
+  {
+    buttonState++;
+  }
+  else
+  {
+    buttonState--;
+  }
+}
 
-    for(int j = 0; j < u8x8.getRows(); j++) {
-      
+/*------------------------------------- START UP SEQUENCE ------------------------------------- */
+void displayCheckerBoard(void) {
+  for(int i = 0; i < u8x8.getCols(); i++) {
+    for(int j = 0; j < u8x8.getRows(); j++) {  
+
       uint8_t tiles[16] = { 0x0f,0x0f,0x0f,0x0f,0xf0,0xf0,0xf0,0xf0, 1, 3, 7, 15, 31, 63, 127, 255};
+
       u8x8.drawTile(i, j, 1, tiles);
+
       delay(50);
     }
     delay(150);
@@ -70,7 +88,8 @@ void displayStart() {
   u8x8.clearDisplay();
 }
 
-void displayLoad() {
+void displayLoad(void) {
+  // If Checker Board Passes Screen is Operational no need for check
   u8x8.drawString(0, 0, "Screen: ");
 
   for(int i = 7; i < u8x8.getCols() - 1; i++) {
@@ -78,12 +97,16 @@ void displayLoad() {
       delay(50);
   } 
 
+  // Check if range is working
+  
   u8x8.drawString(0, 1, "Range: ");
   
   for(int i = 7; i < u8x8.getCols() - 1; i++) {
         u8x8.drawString(i,1, "%");
         delay(50);
   } 
+  // Wait for button press then continue
+  while (digitalRead(buttonPin) != HIGH) {}
 
   u8x8.drawString(0, 2, "Button: ");
   
@@ -98,9 +121,11 @@ void displayLoad() {
 
 }
 
-void readRange() {
+/* -------------------------------------  READ RANGE ------------------------------------- */
+void readRange(void) {
     /* Start Command*/
-    while(Rangefinder.availableForWrite() != 6) {}
+while (Rangefinder.availableForWrite() < 6)
+{}
 
     Rangefinder.write(turnOnCommand, 6);
     
@@ -114,18 +139,11 @@ void readRange() {
     }
     Serial.println(); 
 
-    while(Rangefinder.availableForWrite() != 7) {}
+    while(Rangefinder.availableForWrite() < 7) {}
     Rangefinder.write(turnOffCommand, 7);
 }
 
-void range() { 
-    if(buttonState == 0) {
-      buttonState++;
-    } else {
-      buttonState--;
-    }
-  }
-
+/* ------------------------------------- MATH EQUATIONS ------------------------------------- */
 float calcFallOff(float range, float velocity) {
 
   const float varG = 41.697;
