@@ -8,6 +8,8 @@ const int buttonPin = 2;
 const int rangefinderTx = 4;
 const int rangefinderRx = 3;
 
+const bool DEBUG = false;
+
 /* Constructor */
 U8X8_SSD1306_128X64_NONAME_4W_SW_SPI u8x8(/* clock=*/ 13, /* data=*/ 11, /* cs=*/ 8, /* dc=*/ A0, /* reset=*/ 9);
 SoftwareSerial Rangefinder(/*RX*/rangefinderRx, /*TX*/rangefinderTx);
@@ -17,11 +19,12 @@ volatile long lastDebounceTime = 0;
 volatile long debounceDelay = 50;
 
 /* States of button and display */
-volatile int buttonState = 0; /* False = Not Pressed  True = Pressed*/
+volatile unsigned char buttonState = 0; /* False = Not Pressed  True = Pressed*/
 
 /* Range Finder Commands */
 const unsigned char turnOnCommand[] = {0xD, 0xA, 0x4F, 0x4E, 0xD, 0xA};
 const unsigned char turnOffCommand[] = {0xD, 0xA, 0x4F, 0x46, 0x46 ,0xD, 0xA};
+const unsigned char slowCommand = 0x4D;
 
 void setup(void) {
   u8x8.begin();
@@ -34,11 +37,14 @@ void setup(void) {
   
   Rangefinder.begin(115200);
 
-  // Loading Screen
-  displayStart();
+  if(!DEBUG) {
+    // Loading Screen
+    displayStart();
 
-  // Test Components 
-  displayLoad();
+    // Test Components 
+    displayLoad();
+  }
+  
 }
 
 void loop(void) { 
@@ -94,37 +100,52 @@ void displayLoad() {
 
   u8x8.drawString(2, 5, "Press Button");
   u8x8.drawString(4, 6, "To Start");
-
-
 }
 
 void readRange() {
+    int readCounter = 0;
     /* Start Command*/
-    while(Rangefinder.availableForWrite() != 6) {}
+    if(Rangefinder.availableForWrite() < 7) {Serial.println("Waiting..");}
 
     Rangefinder.write(turnOnCommand, 6);
-    
+    delay(400);
+
+
     Serial.println("Range Finder Start");
     Serial.print("Data Read: "); 
 
-    while(Rangefinder.available() > 0) {
-      char c = Rangefinder.read();
-      Serial.print(c);
-      if(c == "m") break;
-    }
-    Serial.println(); 
+    char displayString[7];
+    int i = 0;
 
-    while(Rangefinder.availableForWrite() != 7) {}
+    while(Rangefinder.available() > 0) {
+
+      if(readCounter == 3) break;
+
+      char c = (char)Rangefinder.read();
+      displayString[i] = c;
+      Serial.print(c);
+
+      if(c == 'm') break;
+      delay(100);  
+    }
+  
+    Serial.println();
+
+    delay(200);
     Rangefinder.write(turnOffCommand, 7);
+
+    u8x8.clear();
+    u8x8.drawString(1, 3, displayString);
+    
+    buttonState--;
 }
 
-void range() { 
-    if(buttonState == 0) {
-      buttonState++;
-    } else {
-      buttonState--;
-    }
-  }
+void range() {
+   if ( (millis() - lastDebounceTime) > debounceDelay) {
+    buttonState++;
+    lastDebounceTime = millis();
+   }
+}
 
 float calcFallOff(float range, float velocity) {
 
