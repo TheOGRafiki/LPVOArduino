@@ -31,34 +31,29 @@ const float DEFAULT_BULLET_SPEED = 2320;
 
 
 void setup(void) {
+  // Start Display Connection
   u8x8.begin();
+  u8x8.setFont(u8x8_font_chroma48medium8_r);
 
+  // Button Setup + Interupt   
   pinMode(buttonPin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(buttonPin), handleButton, RISING);
 
+  // Error Logging 
   Serial.begin(115200);
-  u8x8.setFont(u8x8_font_chroma48medium8_r);
 
+  // Rangefinder UART connection
   Rangefinder.begin(115200);
-
-  if (!DEBUG) {
-    // Loading Screen
-    displayStart();
-
-    // Test Components
-    displayLoad();
-  }
 }
 
 void loop(void) {
-  // char* tempBuff = buttonState;
-  Serial.println(buttonState);
-  while (buttonState == 0) {}
+  while (buttonState == 0) {} // Wait Until Button Has Been Pressed
 
   readRange();
   delay(1000);
 }
 
+// Display Functions --> NOT NEEDED FOR PROJECT TO WORK
 void displayStart() {
   for (int i = 0; i < u8x8.getCols(); i++) {
 
@@ -108,72 +103,85 @@ void displayLoad() {
 }
 
 void readRange() {
-  int readCounter = 0;
-  /* Start Command*/
+  // Start Command
   if (Rangefinder.availableForWrite() < 7) { Serial.println("Waiting.."); }
-
   Rangefinder.write(turnOnCommand, 6);
   delay(400);
-
+  
+  // Error Logging
   Serial.println("Range Finder Start");
   Serial.print("Data Read: ");
 
+  // Placeholder String for Scoping
   String displayString = "";
-  int i = 0;
 
   while (Rangefinder.available() > 0) {
     char c = (char)Rangefinder.read();
     displayString += c;
+
+    // Error Logging
     Serial.print(c);
 
+    // Last character should be m but setup catch for errors
     if (c == 'm') break;
     delay(100);
   }
 
+  // Error Logging  
   Serial.println("");
 
-  delay(200);
+  // Stop Command
   Rangefinder.write(turnOffCommand, 7);
+  delay(200);
 
   // Getting Final Distance
   float finalDistance = handleString(displayString);
+
+  // Error Logging
   Serial.print("finalDistance = ");
   Serial.println(finalDistance, 2);
 
-  // Display Final Distance
+  // u8x8 needs Char Array not String
   char temp[7];
   String newString = String(finalDistance);
   newString.toCharArray(temp, 7);
 
+  // Display String on Display    
   u8x8.clear();
   u8x8.drawString(3, 3, temp);
   delay(250);
 
   // Calculating Angle
   if(finalDistance != 0.0) {
-      float dropAmmount = calcFallOff(finalDistance, DEFAULT_BULLET_SPEED);
-      float finalAngle = calcAngle(dropAmmount, finalDistance);
+    float dropAmmount = calcFallOff(finalDistance, DEFAULT_BULLET_SPEED);
+    float finalAngle = calcAngle(dropAmmount, finalDistance);
 
-      Serial.print("Drop Amount:");
-      Serial.println(dropAmmount, 7); 
+    // Error Logging
+    Serial.print("Drop Amount:");
+    Serial.println(dropAmmount, 7); 
 
-      Serial.print("Final Angle:");
-      Serial.println(finalAngle, 7);
+    // Error Logging
+    Serial.print("Final Angle:");
+    Serial.println(finalAngle, 7);
 
-      displayCompensationPixel(dropAmmount, finalAngle, finalDistance);
-  } else if(finalDistance == 0) {
-    u8x8.drawString(1, 3, "No Value");
+    // Final Display
+    displayCompensationPixel(dropAmmount, finalAngle, finalDistance);
+      
+  } else if(finalDistance == 0) {   
+    u8x8.drawString(1, 3, "No Value"); // Catch Error from Handle String
   }
-
-  // Display Compensation
-
-
+// Reset Button State  
   buttonState--;
 }
 
 void handleButton() {
+  // Check for Button Debounce 
   if ((millis() - lastDebounceTime) > debounceDelay) {
+    
+    // Change button state
     buttonState++;
+    
+    // Reset Debounce time    
     lastDebounceTime = millis();
   }
 }
@@ -183,7 +191,8 @@ void displayCompensationPixel(float drop, float angle, float range) {
 }
 
 float handleString(String inputString) {
-
+  
+  // See if you can avoid using buffer
   String handler = inputString;
   // D=XX.Xm
   
