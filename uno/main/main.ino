@@ -2,23 +2,6 @@
 #include <SPI.h>
 #include <U8x8lib.h>
 #include <SoftwareSerial.h>
-#include <U8g2lib.h>
-
-class Gun {
-  public: 
-    float bulletSpeed = 2320;
-    float bulletWeight = 21; // grams 
-
-    Gun() {Serial.println("New Gun Created");}
-
-    void setBulletSpeed(float newBulletSpeed) {
-      bulletSpeed = newBulletSpeed;
-    }
-
-    void setBulletWeight(float newBulletWeight) {
-      bulletWeight = newBulletWeight; 
-    }
-};
 
 /* Pin Declaration */
 const int buttonPin = 2;
@@ -29,10 +12,7 @@ const bool DEBUG = true;
 
 /* Constructor */
 U8X8_SSD1306_128X64_NONAME_4W_SW_SPI u8x8(/* clock=*/13, /* data=*/11, /* cs=*/8, /* dc=*/A0, /* reset=*/9);
-U8G2_SSD1306_128X64_NONAME_1_4W_SW_SPI u8g2(U8G2_R0, /* clock=*/ 13, /* data=*/ 11, /* cs=*/ 8, /* dc=*/ A0, /* reset=*/ 9);
-
 SoftwareSerial Rangefinder(/*RX*/ rangefinderRx, /*TX*/ rangefinderTx);
-Gun gunObj;
 
 /* Button Debounce Paramas*/
 volatile long lastDebounceTime = 0;
@@ -47,6 +27,7 @@ const unsigned char turnOffCommand[] = { 0xD, 0xA, 0x4F, 0x46, 0x46, 0xD, 0xA };
 const unsigned char slowCommand = 0x4D;
 
 /* Bullet Params */
+const float DEFAULT_BULLET_SPEED = 2320;
 
 
 /* ------------------------------------- SETUP ------------------------------------- */
@@ -175,7 +156,6 @@ void readRange() {
 
   // Calculating Angle
   if(finalDistance != 0.0) {
-<<<<<<< Updated upstream
     float dropAmmount = calcFallOff(finalDistance, DEFAULT_BULLET_SPEED);
     float finalAngle = calcAngle(dropAmmount, finalDistance);
 
@@ -194,36 +174,14 @@ void readRange() {
     u8x8.drawString(1, 3, "No Value"); // Catch Error from Handle String
   }
 // Reset Button State  
-=======
-      float dropAmmount = calcFallOff(finalDistance, gunObj.bulletSpeed);
-      float finalAngle = calcAngle(dropAmmount, finalDistance);
-
-      Serial.print("Drop Amount:");
-      Serial.println(dropAmmount, 7); 
-
-      Serial.print("Final Angle:");
-      Serial.println(finalAngle, 7);
-
-      displayCompensationPixel(dropAmmount, finalAngle, finalDistance);
-  } else if(finalDistance == 0) {
-    u8x8.drawString(1, 3, "No Value");
-  }
->>>>>>> Stashed changes
   buttonState--;
 }
 
 void handleButton() {
   // Check for Button Debounce 
   if ((millis() - lastDebounceTime) > debounceDelay) {
-<<<<<<< Updated upstream
     
     // Change button state
-=======
-    if(buttonState > 1) {
-      buttonState--;
-      return;
-    }
->>>>>>> Stashed changes
     buttonState++;
     
     // Reset Debounce time    
@@ -232,17 +190,7 @@ void handleButton() {
 }
 
 void displayCompensationPixel(float drop, float angle, float range) {
-  u8x8.clearDisplay();
-  unsigned char rectile[8] ={0x0f,0x0f,0x0f,0x0f,0x0f,0x0f,0x0f,0x0f};
-
-  int centerRow = u8x8.getRows()/2;
-  int centerCol = u8x8.getCols()/2;
-
-  u8x8.drawTile(centerCol, centerRow, 1, rectile);
-
-  int newPosition = calcNewPos(angle);
-
-  u8x8.drawTile(centerCol, newPosition, 1, rectile);
+  u8x8.drawString(1, 3, "Display Comp");
 }
 
 float handleString(String inputString) {
@@ -257,14 +205,6 @@ float handleString(String inputString) {
 
   return handler.toFloat();
 }
-
-int calcNewPos(float angle) {
-
-  int bottomDistance = u8x8.getCols()/2;
-  float fixedDistance = (tan(angle) * 180.0f/ PI) * bottomDistance; 
-
-  return fixedDistance;
-} 
 
 float calcFallOff(float range, float velocity) {
 
