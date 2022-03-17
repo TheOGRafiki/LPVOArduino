@@ -10,9 +10,26 @@ const int rangefinderRx = 3;
 
 const bool DEBUG = true;
 
+class Gun {
+  public: 
+    float bulletSpeed = 2320;
+    float bulletWeight = 21; // grams 
+
+    Gun() {Serial.println("New Gun Created");}
+
+    void setBulletSpeed(float newBulletSpeed) {
+      bulletSpeed = newBulletSpeed;
+    }
+
+    void setBulletWeight(float newBulletWeight) {
+      bulletWeight = newBulletWeight; 
+    }
+};
+
 /* Constructor */
 U8X8_SSD1306_128X64_NONAME_4W_SW_SPI u8x8(/* clock=*/13, /* data=*/11, /* cs=*/8, /* dc=*/A0, /* reset=*/9);
 SoftwareSerial Rangefinder(/*RX*/ rangefinderRx, /*TX*/ rangefinderTx);
+Gun gunObj;
 
 /* Button Debounce Paramas*/
 volatile long lastDebounceTime = 0;
@@ -28,8 +45,6 @@ const unsigned char slowCommand = 0x4D;
 
 /* Bullet Params */
 const float DEFAULT_BULLET_SPEED = 2320;
-
-
 /* ------------------------------------- SETUP ------------------------------------- */
 void setup(void) {
   // Start Display Connection
@@ -156,7 +171,7 @@ void readRange() {
 
   // Calculating Angle
   if(finalDistance != 0.0) {
-    float dropAmmount = calcFallOff(finalDistance, DEFAULT_BULLET_SPEED);
+    float dropAmmount = calcFallOff(finalDistance, gunObj.bulletSpeed);
     float finalAngle = calcAngle(dropAmmount, finalDistance);
 
     // Error Logging
@@ -190,8 +205,27 @@ void handleButton() {
 }
 
 void displayCompensationPixel(float drop, float angle, float range) {
+  u8x8.clearDisplay();
+  unsigned char rectile[8] ={0x0f,0x0f,0x0f,0x0f,0x0f,0x0f,0x0f,0x0f};
+
+  int centerRow = u8x8.getRows()/2;
+  int centerCol = u8x8.getCols()/2;
+
+  u8x8.drawTile(centerCol, centerRow, 1, rectile);
+
+  int newPosition = calcNewPos(angle);
+
+  u8x8.drawTile(centerCol, newPosition, 1, rectile);
   u8x8.drawString(1, 3, "Display Comp");
 }
+
+int calcNewPos(float angle) {
+
+  int bottomDistance = u8x8.getCols()/2;
+  float fixedDistance = (tan(angle) * 180.0f/ PI) * bottomDistance; 
+
+  return fixedDistance;
+} 
 
 float handleString(String inputString) {
   
