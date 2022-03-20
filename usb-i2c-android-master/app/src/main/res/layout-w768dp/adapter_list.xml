@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright (c) 2019 Victor Antonovich <v.antonovich@gmail.com>
+  ~
+  ~ This work is free software; you can redistribute it and/or
+  ~ modify it under the terms of the GNU Lesser General Public License
+  ~ as published by the Free Software Foundation; either version 2.1
+  ~ of the License, or (at your option) any later version.
+  ~
+  ~ This work is distributed in the hope that it will be useful, but
+  ~ without any warranty; without even the implied warranty of merchantability
+  ~ or fitness for a particular purpose. See the GNU Lesser General Public
+  ~ License for more details.
+  ~
+  ~ You should have received a copy of the GNU Lesser General Public License
+  ~ along with this library; if not, write to the Free Software Foundation, Inc.,
+  ~ 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
+  -->
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_marginLeft="16dp"
+    android:layout_marginRight="16dp"
+    android:baselineAligned="false"
+    android:divider="?android:attr/dividerHorizontal"
+    android:orientation="horizontal"
+    android:showDividers="middle"
+    tools:context=".I2cAdapterListActivity">
+
+    <!--
+    This layout is a two-pane layout for the I2cAdapterListActivity
+    master/detail flow.
+    
+    -->
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/adapter_list_refresh"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <com.github.ykc3.android.usbi2c.app.view.CustomRecyclerView
+                android:id="@+id/adapter_list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginLeft="16dp"
+                android:layout_marginRight="16dp"
+                app:layoutManager="LinearLayoutManager"
+                tools:context=".I2cAdapterListActivity"
+                tools:listitem="@layout/adapter_list_content" />
+
+            <TextView
+                android:id="@+id/empty_adapter_list"
+                android:tag="empty_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:text="@string/empty_adapter_list"
+                android:textStyle="italic"
+                android:textAlignment="center"
+                android:layout_gravity="top|center_horizontal"
+                android:visibility="gone" />
+
+        </FrameLayout>
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <FrameLayout
+        android:id="@+id/adapter_device_list_container"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="2" />
+
+</LinearLayout>

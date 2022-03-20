@@ -216,7 +216,6 @@ void displayCompensationPixel(float drop, float angle, float range) {
   int newPosition = calcNewPos(angle);
 
   u8x8.drawTile(centerCol, newPosition, 1, rectile);
-  u8x8.drawString(1, 3, "Display Comp");
 }
 
 int calcNewPos(float angle) {
