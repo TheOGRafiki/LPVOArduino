@@ -2,6 +2,7 @@
 #include <SPI.h>
 #include <U8x8lib.h>
 #include <SoftwareSerial.h>
+#include <Wire.h>
 
 /* Pin Declaration */
 const int buttonPin = 2;
@@ -48,6 +49,9 @@ const float DEFAULT_BULLET_SPEED = 2320;
 /* ------------------------------------- SETUP ------------------------------------- */
 void setup(void) {
   // Start Display Connection
+  Wire.begin(8);
+  Wire.onReceive(receiveEvent);
+  
   u8x8.begin();
   u8x8.setFont(u8x8_font_chroma48medium8_r);
 
@@ -60,6 +64,8 @@ void setup(void) {
 
   // Rangefinder UART connection
   Rangefinder.begin(115200);
+
+  displayLoad();
 }
 
 void loop(void) {
@@ -67,6 +73,19 @@ void loop(void) {
 
   readRange();
   delay(1000);
+}
+
+// On Receive 
+void receiveEvent(int howMany) {
+  int x = 0;
+  char * string;
+
+  while(1 < Wire.available()) {
+    char c = Wire.read();
+    string[x] = c;
+    x++;
+  } 
+  u8x8.drawString(1, 3, string);
 }
 
 // Display Functions --> NOT NEEDED FOR PROJECT TO WORK
@@ -113,6 +132,12 @@ void displayLoad(void) {
 
   for (int i = 7; i < u8x8.getCols() - 1; i++) {
     u8x8.drawString(i, 2, "%");
+    delay(50);
+  }
+  u8x8.drawString(0, 3, "USB: ");
+
+   for (int i = 7; i < u8x8.getCols() - 1; i++) {
+    u8x8.drawString(i, 3, "%");
     delay(50);
   }
 
