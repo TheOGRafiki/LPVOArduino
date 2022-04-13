@@ -3,6 +3,8 @@
 #include <U8x8lib.h>
 #include <SoftwareSerial.h>
 #include <Wire.h>
+#include "QuickStats.h"
+
 
 /* Pin Declaration */
 const int buttonPin = 2;
@@ -31,6 +33,7 @@ class Gun {
 U8X8_SSD1306_128X64_NONAME_4W_SW_SPI u8x8(/* clock=*/13, /* data=*/11, /* cs=*/8, /* dc=*/A0, /* reset=*/9);
 SoftwareSerial Rangefinder(/*RX*/ rangefinderRx, /*TX*/ rangefinderTx);
 Gun gunObj;
+QuickStats stats;
 
 /* Button Debounce Paramas*/
 volatile long lastDebounceTime = 0;
@@ -65,6 +68,7 @@ void setup(void) {
   // Rangefinder UART connection
   Rangefinder.begin(115200);
 
+  // Start Up Display
   displayLoad();
 }
 
@@ -84,7 +88,8 @@ void receiveEvent(int howMany) {
     char c = Wire.read();
     string[x] = c;
     x++;
-  } 
+  }
+
   u8x8.drawString(1, 3, string);
 }
 
@@ -147,74 +152,58 @@ void displayLoad(void) {
 
 void readRange() {
   // Start Command
+  Rangefinder.flush();
   if (Rangefinder.availableForWrite() < 7) { Serial.println("Waiting.."); }
   Rangefinder.write(turnOnCommand, 6);
-  delay(400);
-  
+  delay(500);
+  Rangefinder.write(turnOffCommand, 7);
+
   // Error Logging
   Serial.println("Range Finder Start");
   Serial.print("Data Read: ");
 
   // Placeholder String for Scoping
-  String displayString = "";
+  float values[10];
+  int valuePos = 0;
+  String allVals = "";
 
   while (Rangefinder.available() > 0) {
-    char c = (char)Rangefinder.read();
-    displayString += c;
-
-    // Error Logging
-    Serial.print(c);
-
-    // Last character should be m but setup catch for errors
-    if (c == 'm') break;
-    delay(100);
+    char c = Rangefinder.read();
+    allVals += c;
   }
 
-  // Error Logging  
-  Serial.println("");
+  int startIndex = 0;
+  int endIndex = 0;
+  // Filtering bad data through "D" and "m"
+  for (int i = 0; i < allVals.length(); i++) {
+    if (allVals[i] == 'D' && allVals[i + 1] == '=') {
+      startIndex = i;
+    }
 
-  // Stop Command
-  Rangefinder.write(turnOffCommand, 7);
-  delay(200);
+    if (allVals[i] == 'm') {
+      endIndex = i;
+    }
 
-  // Getting Final Distance
-  float finalDistance = handleString(displayString);
-
-  // Error Logging
-  Serial.print("finalDistance = ");
-  Serial.println(finalDistance, 2);
-
-  // u8x8 needs Char Array not String
-  char temp[7];
-  String newString = String(finalDistance);
-  newString.toCharArray(temp, 7);
-
-  // Display String on Display    
-  u8x8.clear();
-  u8x8.drawString(3, 3, temp);
-  delay(250);
-
-  // Calculating Angle
-  if(finalDistance != 0.0) {
-    float dropAmmount = calcFallOff(finalDistance, gunObj.bulletSpeed);
-    float finalAngle = calcAngle(dropAmmount, finalDistance);
-
-    // Error Logging
-    Serial.print("Drop Amount:");
-    Serial.println(dropAmmount, 7); 
-
-    // Error Logging
-    Serial.print("Final Angle:");
-    Serial.println(finalAngle, 7);
-
-    // Final Display
-    displayCompensationPixel(dropAmmount, finalAngle, finalDistance);
-      
-  } else if(finalDistance == 0) {   
-    u8x8.drawString(1, 3, "No Value"); // Catch Error from Handle String
+    if (startIndex != endIndex && valuePos < 10) {
+      String out = allVals.substring(startIndex, endIndex + 1);
+      float value = handleString(out);
+      values[valuePos] = value;
+      startIndex = endIndex = 0;
+      valuePos++;
+    }
   }
+  float trueRange = stats.mode(values, values.length(), 0.0001);
+  displayPix(trueRange);
 // Reset Button State  
   buttonState--;
+}
+void displayPix(float trueRange) {
+
+  // Only work based on 300, 400, 500 and 600
+  // 300 yd = 1 pixel down
+  // 400 yd = 2 px down
+  // 500 yd = 4 px down
+  // 600 yd = 6 px down
 }
 
 void handleButton() {
@@ -227,20 +216,6 @@ void handleButton() {
     // Reset Debounce time    
     lastDebounceTime = millis();
   }
-}
-
-void displayCompensationPixel(float drop, float angle, float range) {
-  u8x8.clearDisplay();
-  unsigned char rectile[8] ={0x0f,0x0f,0x0f,0x0f,0x0f,0x0f,0x0f,0x0f};
-
-  int centerRow = u8x8.getRows()/2;
-  int centerCol = u8x8.getCols()/2;
-
-  u8x8.drawTile(centerCol, centerRow, 1, rectile);
-
-  int newPosition = calcNewPos(angle);
-
-  u8x8.drawTile(centerCol, newPosition, 1, rectile);
 }
 
 int calcNewPos(float angle) {
@@ -263,7 +238,7 @@ float handleString(String inputString) {
 
   return handler.toFloat();
 }
-
+/* WE ARE USING A TABLE NOW INSTEAD
 float calcFallOff(float range, float velocity) {
 
   const float varG = 41.697;
@@ -298,3 +273,4 @@ float calcAngle(float drop, float distance) {
 
   return dropAngleDegs;
 }
+*./
