@@ -89,8 +89,44 @@ void receiveEvent(int howMany) {
     string[x] = c;
     x++;
   }
+  
+  handleCommand(String(string));
+  string[0] = '\0';
+}
 
-  u8x8.drawString(1, 3, string);
+void handleCommand(String inputData) {
+  if(inputData.length() == 0) return;
+  String com = inputData.substring(0, 4);
+
+  String setSpeed = "SETS";
+  String setWeight = "SETW";
+  String requestData = "REQD";
+  String displayData = "DISP";
+  
+  if(com.equalsIgnoreCase(requestData))
+  {
+      // Send Data
+      Serial.println("Case 1");
+  }
+  else if(com.equalsIgnoreCase("SETS")) 
+  {
+      // Set Speed
+      gunObj.setBulletSpeed(inputData.substring(4).toFloat());
+      Serial.println(gunObj.bulletSpeed);
+      Serial.println("Case 2");
+  }
+  else if(com.equalsIgnoreCase("SETW"))
+  {
+      gunObj.setBulletWeight(inputData.substring(4).toFloat());
+      Serial.println("Case 3");
+  }
+  else if(com.equalsIgnoreCase("DISP")) 
+  {
+      char* buff;
+      inputData.substring(4).toCharArray(buff, 15);
+      u8x8.drawString(1, 3, buff);
+      Serial.println("Case 4");
+  }
 }
 
 // Display Functions --> NOT NEEDED FOR PROJECT TO WORK
