@@ -228,7 +228,7 @@ void readRange() {
       valuePos++;
     }
   }
-  float trueRange = stats.mode(values, values.length(), 0.0001);
+  float trueRange = stats.mode(values, 10, 0.0001);
   displayPix(trueRange);
 // Reset Button State  
   buttonState--;
@@ -240,6 +240,28 @@ void displayPix(float trueRange) {
   // 400 yd = 2 px down
   // 500 yd = 4 px down
   // 600 yd = 6 px down
+
+  unsigned char defaultRectile[8] = {0x00, 0x00, 0x00, 0x10, 0x10, 0x00, 0x00, 0x0};
+  unsigned char oneDownRectile[8] = {0x00, 0x00, 0x10, 0x10, 0x00, 0x00, 0x00, 0x00};
+  unsigned char twoDownRectile[8] = {0x00, 0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00};
+  unsigned char fourDownRectile[8] = {0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+  trueRange = trueRange * 1.09361;
+
+  if(trueRange < 300) {
+    u8x8.drawTile(1, 3, 1, defaultRectile);
+  } else if(trueRange >= 300 && trueRange < 400) {
+    u8x8.drawTile(1, 3, 1, oneDownRectile);
+  } else if(trueRange >= 400 && trueRange < 500) {
+    u8x8.drawTile(1, 3, 1, twoDownRectile);
+  } else if(trueRange >= 500 && trueRange < 600) {
+    u8x8.drawTile(1, 3, 1, fourDownRectile);
+  } 
+  else {
+    u8x8.drawString(1, 3, "Out of Range");
+    delay(1000);
+    u8x8.drawTile(1, 3, 1, defaultRectile);
+  }
 }
 
 void handleButton() {
@@ -274,39 +296,3 @@ float handleString(String inputString) {
 
   return handler.toFloat();
 }
-/* WE ARE USING A TABLE NOW INSTEAD
-float calcFallOff(float range, float velocity) {
-
-  const float varG = 41.697;
-  const float varN = 0.5;
-  const long varFzero = 3230;
-
-  float varFm = (float)varFzero - (float)(0.75 + 0.00006 * range) * (float)(varN * range);
-
-  // Denominator First
-  float recipRange = 1.00 / range;
-  float recipMultiply = 1.00 / (varFm);
-
-  float denominator = recipRange - recipMultiply;
-
-  // Numerator
-  float numerator = varG / float(velocity);
-
-  // Final
-
-  float varD = (float)(numerator / denominator);
-  varD *= varD;
-  varD /= 12;
-
-  return varD;
-}
-
-float calcAngle(float drop, float distance) {
-
-  float dropAngleRads = atan2f(drop, distance);
-
-  float dropAngleDegs = (dropAngleRads * 4068) / 71;
-
-  return dropAngleDegs;
-}
-*./
