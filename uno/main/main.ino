@@ -39,7 +39,7 @@ QuickStats stats;
 volatile long lastDebounceTime = 0;
 volatile long debounceDelay = 50;
 
-/* States of button and display */
+/* States of button */
 volatile unsigned char buttonState = 0; /* False = Not Pressed  True = Pressed*/
 
 /* Range Finder Commands */
@@ -49,7 +49,7 @@ const unsigned char slowCommand = 0x4D;
 
 /* Bullet Params */
 const float DEFAULT_BULLET_SPEED = 2320;
-/* ------------------------------------- SETUP ------------------------------------- */
+// *******************************Setup and Main Loop**********************************
 void setup(void) {
   // Start Display Connection
   Wire.begin(8);
@@ -79,7 +79,7 @@ void loop(void) {
   delay(1000);
 }
 
-// On Receive 
+// **************************** I2C Mobile Commnads **********************************
 void receiveEvent(int howMany) {
   int x = 0;
   char * string;
@@ -128,8 +128,8 @@ void handleCommand(String inputData) {
       Serial.println("Case 4");
   }
 }
-
-// Display Functions --> NOT NEEDED FOR PROJECT TO WORK
+// ************************************************************************************
+// ******************************* Start Up Functions *********************************
 void displayStart() {
   for (int i = 0; i < u8x8.getCols(); i++) {
 
@@ -185,7 +185,8 @@ void displayLoad(void) {
   u8x8.drawString(2, 5, "Press Button");
   u8x8.drawString(4, 6, "To Start");
 }
-
+// ************************************************************************************
+// ******************************* Rangefinder + Comp Pixel ***************************
 void readRange() {
   // Start Command
   Rangefinder.flush();
@@ -263,7 +264,8 @@ void displayPix(float trueRange) {
     u8x8.drawTile(1, 3, 1, defaultRectile);
   }
 }
-
+// ************************************************************************************
+// ******************************* Handlers for Main Functions ************************
 void handleButton() {
   // Check for Button Debounce 
   if ((millis() - lastDebounceTime) > debounceDelay) {
@@ -275,14 +277,6 @@ void handleButton() {
     lastDebounceTime = millis();
   }
 }
-
-int calcNewPos(float angle) {
-
-  int bottomDistance = u8x8.getCols()/2;
-  float fixedDistance = (tan(angle) * 180.0f/ PI) * bottomDistance; 
-
-  return fixedDistance;
-} 
 
 float handleString(String inputString) {
   
