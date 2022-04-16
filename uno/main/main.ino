@@ -30,7 +30,7 @@ class Gun {
 };
 
 /* Constructor */
-U8X8_SSD1306_128X64_NONAME_4W_SW_SPI u8x8(/* clock=*/13, /* data=*/11, /* cs=*/8, /* dc=*/A0, /* reset=*/9);
+U8X8_SSD1306_128X64_VCOMH0_4W_SW_SPI u8x8(/* clock=*/13, /* data=*/11, /* cs=*/8, /* dc=*/A0, /* reset=*/9);
 SoftwareSerial Rangefinder(/*RX*/ rangefinderRx, /*TX*/ rangefinderTx);
 Gun gunObj;
 QuickStats stats;
@@ -40,7 +40,7 @@ volatile long lastDebounceTime = 0;
 volatile long debounceDelay = 50;
 
 /* States of button */
-volatile unsigned char buttonState = 0; /* False = Not Pressed  True = Pressed*/
+volatile int buttonState = 0; /* False = Not Pressed  True = Pressed*/
 
 /* Range Finder Commands */
 const unsigned char turnOnCommand[] = { 0xD, 0xA, 0x4F, 0x4E, 0xD, 0xA };
@@ -49,6 +49,17 @@ const unsigned char slowCommand = 0x4D;
 
 /* Bullet Params */
 const float DEFAULT_BULLET_SPEED = 2320;
+bool toggleRange = false;
+
+/* I2C Mobile Global Vars*/
+String mobileBuffer = "";
+char MESSAGE_START = '<';
+char MESSAGE_END = '>';
+char message[32] = "";
+bool isGettingData = false;
+bool hasNewData = false;
+int index = 0;
+
 // *******************************Setup and Main Loop**********************************
 void setup(void) {
   // Start Display Connection
@@ -73,59 +84,94 @@ void setup(void) {
 }
 
 void loop(void) {
-  while (buttonState == 0) {} // Wait Until Button Has Been Pressed
+  while(buttonState != 0) {
+      u8x8.drawString(1, 3, "HELLO JACOB");
+      delay(700);
+      u8x8.clearDisplay();
+      readRange();
+  }
 
-  readRange();
+  if(hasNewData) {
+    handleCommand(message);
+    hasNewData = false;
+    // Clear message
+  }
+
+  // Write to mobile
+  if(mobileBuffer.length() != 0) {
+    char * mobileCharArray;
+    mobileBuffer.toCharArray(mobileCharArray, mobileBuffer.length(), 0);
+
+    Wire.write(mobileCharArray);
+    mobileBuffer = "";    
+  }
+
+  
   delay(1000);
 }
 
 // **************************** I2C Mobile Commnads **********************************
 void receiveEvent(int howMany) {
-  int x = 0;
-  char * string;
+  while(Wire.available() > 0) {
+      char curr = (char) Wire.read();
 
-  while(1 < Wire.available()) {
-    char c = Wire.read();
-    string[x] = c;
-    x++;
+      if(curr == MESSAGE_END) {
+        isGettingData = false;
+        hasNewData = true;
+        index = 0;
+      }
+
+      if(isGettingData) {
+        message[index] = curr;
+        index++;
+      }
+
+      if(curr == MESSAGE_START) {
+        isGettingData = true;
+      }
   }
-  
-  handleCommand(String(string));
-  string[0] = '\0';
 }
 
 void handleCommand(String inputData) {
   if(inputData.length() == 0) return;
   String com = inputData.substring(0, 4);
+  String val = inputData.substring(5);
+
+  val.trim();
+  com.trim();
 
   String setSpeed = "SETS";
   String setWeight = "SETW";
-  String requestData = "REQD";
   String displayData = "DISP";
+  String setContrast = "SCON";
+  String toggleRange = "TRNG";
+  String setCommand = "SRNG";
+  String clearDisplay = "CLSD";
   
-  if(com.equalsIgnoreCase(requestData))
-  {
-      // Send Data
-      Serial.println("Case 1");
-  }
-  else if(com.equalsIgnoreCase("SETS")) 
+  if(com.equalsIgnoreCase("SETS")) 
   {
       // Set Speed
-      gunObj.setBulletSpeed(inputData.substring(4).toFloat());
-      Serial.println(gunObj.bulletSpeed);
-      Serial.println("Case 2");
+      gunObj.setBulletSpeed(val.toFloat());
   }
   else if(com.equalsIgnoreCase("SETW"))
   {
-      gunObj.setBulletWeight(inputData.substring(4).toFloat());
-      Serial.println("Case 3");
+      gunObj.setBulletWeight(val.toFloat());
   }
   else if(com.equalsIgnoreCase("DISP")) 
   {
       char* buff;
-      inputData.substring(4).toCharArray(buff, 15);
+      val.toCharArray(buff, 15);
       u8x8.drawString(1, 3, buff);
-      Serial.println("Case 4");
+      delay(2000);
+  } else if(com.equalsIgnoreCase("SCON")) {
+    // Set Contrast
+    u8x8.setContrast(val.toInt());
+  } else if(com.equalsIgnoreCase("TRNG")) {
+    toggleRange = !toggleRange;
+  } else if(com.equalsIgnoreCase("SRNG")) {
+    displayPix(val.toFloat());
+  } else if(com.equalsIgnoreCase("CLSD")) {
+    u8x8.clearDisplay();
   }
 }
 // ************************************************************************************
@@ -202,12 +248,17 @@ void readRange() {
   // Placeholder String for Scoping
   float values[10];
   int valuePos = 0;
-  String allVals = "";
+
+  int i = 0;
+  char * allValsArray = "";
 
   while (Rangefinder.available() > 0) {
     char c = Rangefinder.read();
-    allVals += c;
+    allValsArray[i] = c;
+    i++;
   }
+  
+  String allVals = String(allValsArray);
 
   int startIndex = 0;
   int endIndex = 0;
@@ -230,9 +281,11 @@ void readRange() {
     }
   }
   float trueRange = stats.mode(values, 10, 0.0001);
+  // fill buffer with trueRnage;
+  mobileBuffer = String(trueRange);
   displayPix(trueRange);
 // Reset Button State  
-  buttonState--;
+  buttonState = 0;
 }
 void displayPix(float trueRange) {
 
@@ -242,7 +295,8 @@ void displayPix(float trueRange) {
   // 500 yd = 4 px down
   // 600 yd = 6 px down
 
-  unsigned char defaultRectile[8] = {0x00, 0x00, 0x00, 0x10, 0x10, 0x00, 0x00, 0x0};
+  unsigned char defaultRectileLeft[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10};
+  unsigned char defaultRectileRight[8] = {0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   unsigned char oneDownRectile[8] = {0x00, 0x00, 0x10, 0x10, 0x00, 0x00, 0x00, 0x00};
   unsigned char twoDownRectile[8] = {0x00, 0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00};
   unsigned char fourDownRectile[8] = {0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -250,18 +304,26 @@ void displayPix(float trueRange) {
   trueRange = trueRange * 1.09361;
 
   if(trueRange < 300) {
-    u8x8.drawTile(1, 3, 1, defaultRectile);
+    u8x8.drawTile(7, 3, 1, defaultRectileLeft);
+    u8x8.drawTile(8, 3, 1, defaultRectileRight);
   } else if(trueRange >= 300 && trueRange < 400) {
-    u8x8.drawTile(1, 3, 1, oneDownRectile);
+    u8x8.drawTile(7, 3, 1, oneDownRectile);
   } else if(trueRange >= 400 && trueRange < 500) {
-    u8x8.drawTile(1, 3, 1, twoDownRectile);
+    u8x8.drawTile(7, 3, 1, twoDownRectile);
   } else if(trueRange >= 500 && trueRange < 600) {
-    u8x8.drawTile(1, 3, 1, fourDownRectile);
+    u8x8.drawTile(7, 3, 1, fourDownRectile);
   } 
   else {
     u8x8.drawString(1, 3, "Out of Range");
     delay(1000);
-    u8x8.drawTile(1, 3, 1, defaultRectile);
+    u8x8.drawTile(7, 3, 1, defaultRectileLeft);
+    u8x8.drawTile(7, 3, 1, defaultRectileRight);
+  }
+
+  if(toggleRange) {
+    char * buff;
+    String(trueRange).toCharArray(buff, 10, 0);
+    u8x8.drawString(0, 0, buff);
   }
 }
 // ************************************************************************************
@@ -271,7 +333,7 @@ void handleButton() {
   if ((millis() - lastDebounceTime) > debounceDelay) {
     
     // Change button state
-    buttonState++;
+    buttonState = 1;
     
     // Reset Debounce time    
     lastDebounceTime = millis();
