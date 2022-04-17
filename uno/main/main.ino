@@ -49,7 +49,7 @@ const unsigned char slowCommand = 0x4D;
 
 /* Bullet Params */
 const float DEFAULT_BULLET_SPEED = 2320;
-bool toggleRange = false;
+bool toggleRange = true;
 
 /* I2C Mobile Global Vars*/
 String mobileBuffer = "";
@@ -85,8 +85,6 @@ void setup(void) {
 
 void loop(void) {
   while(buttonState != 0) {
-      u8x8.drawString(1, 3, "HELLO JACOB");
-      delay(700);
       u8x8.clearDisplay();
       readRange();
   }
@@ -250,18 +248,21 @@ void readRange() {
   int valuePos = 0;
 
   int i = 0;
-  char * allValsArray = "";
+  char allValsArray[50];
 
   while (Rangefinder.available() > 0) {
-    char c = Rangefinder.read();
-    allValsArray[i] = c;
-    i++;
+
+    if(i < 50) {
+      char c = Rangefinder.read();
+      allValsArray[i] = c;
+      i++;
+    }
   }
   
-  String allVals = String(allValsArray);
-
   int startIndex = 0;
   int endIndex = 0;
+  String allVals = String(allValsArray);
+
   // Filtering bad data through "D" and "m"
   for (int i = 0; i < allVals.length(); i++) {
     if (allVals[i] == 'D' && allVals[i + 1] == '=') {
@@ -280,7 +281,8 @@ void readRange() {
       valuePos++;
     }
   }
-  float trueRange = stats.mode(values, 10, 0.0001);
+
+  float trueRange = stats.mode(values, valuePos, 0.1);
   // fill buffer with trueRnage;
   mobileBuffer = String(trueRange);
   displayPix(trueRange);
@@ -340,8 +342,7 @@ void handleButton() {
   }
 }
 
-float handleString(String inputString) {
-  
+float handleString(String inputString) { 
   // See if you can avoid using buffer
   String handler = inputString;
   // D=XX.Xm
