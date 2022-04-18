@@ -84,7 +84,7 @@ void setup(void) {
 }
 
 void loop(void) {
-  while(buttonState != 0) {
+  if(buttonState != 0) {
       u8x8.clearDisplay();
       readRange();
   }
@@ -105,7 +105,7 @@ void loop(void) {
   }
 
   
-  delay(1000);
+  delay(100);
 }
 
 // **************************** I2C Mobile Commnads **********************************
@@ -238,6 +238,7 @@ void readRange() {
   Rangefinder.write(turnOnCommand, 6);
   delay(500);
   Rangefinder.write(turnOffCommand, 7);
+  delay(500);
 
   // Error Logging
   Serial.println("Range Finder Start");
@@ -250,10 +251,10 @@ void readRange() {
   int i = 0;
   char allValsArray[50];
 
-  while (Rangefinder.available() > 0) {
+  while(Rangefinder.available() > 0) {
 
     if(i < 50) {
-      char c = Rangefinder.read();
+      char c = (char)Rangefinder.read();
       allValsArray[i] = c;
       i++;
     }
@@ -308,8 +309,9 @@ void displayPix(float trueRange) {
   // 500 yd = 4 px down
   // 600 yd = 6 px down
 
-  unsigned char defaultRectileLeft[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10};
+  unsigned char defaultRectile[8] = {0x00, 0x00, 0x00, 0x10, 0x10, 0x00, 0x00, 0x00};
   unsigned char defaultRectileRight[8] = {0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
   unsigned char oneDownRectile[8] = {0x00, 0x00, 0x10, 0x10, 0x00, 0x00, 0x00, 0x00};
   unsigned char twoDownRectile[8] = {0x00, 0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00};
   unsigned char fourDownRectile[8] = {0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -317,8 +319,7 @@ void displayPix(float trueRange) {
   trueRange = trueRange * 1.09361;
 
   if(trueRange < 300) {
-    u8x8.drawTile(7, 3, 1, defaultRectileLeft);
-    u8x8.drawTile(8, 3, 1, defaultRectileRight);
+    u8x8.drawTile(7, 3, 1, defaultRectile);
   } else if(trueRange >= 300 && trueRange < 400) {
     u8x8.drawTile(7, 3, 1, oneDownRectile);
   } else if(trueRange >= 400 && trueRange < 500) {
@@ -329,13 +330,12 @@ void displayPix(float trueRange) {
   else {
     u8x8.drawString(1, 3, "Out of Range");
     delay(1000);
-    u8x8.drawTile(7, 3, 1, defaultRectileLeft);
-    u8x8.drawTile(7, 3, 1, defaultRectileRight);
+    u8x8.drawTile(7, 3, 1, defaultRectile);
   }
 
   if(toggleRange) {
     char * buff;
-    String(trueRange).toCharArray(buff, 10, 0);
+    String(trueRange).toCharArray(buff, String(trueRange).length());
     u8x8.drawString(0, 0, buff);
   }
 }
@@ -353,7 +353,8 @@ void handleButton() {
   }
 }
 
-float handleString(String inputString) { 
+float handleString(String inputString) {
+
   char buff[inputString.length()]; 
   inputString.toCharArray(buff, inputString.length());
   String tempBuf = "";
@@ -363,6 +364,5 @@ float handleString(String inputString) {
       tempBuf += buff[i];
     }
   }
-
    return tempBuf.toFloat(); 
 }
