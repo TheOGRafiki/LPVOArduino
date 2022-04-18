@@ -265,28 +265,39 @@ void readRange() {
 
   // Filtering bad data through "D" and "m"
   for (int i = 0; i < allVals.length(); i++) {
-    if (allVals[i] == 'D' && allVals[i + 1] == '=') {
+    if (allVals.charAt(i) == 'D') {
       startIndex = i;
     }
 
-    if (allVals[i] == 'm') {
+    if (allVals.charAt(i) == 'm') {
       endIndex = i;
     }
 
-    if (startIndex != endIndex && valuePos < 10) {
-      String out = allVals.substring(startIndex, endIndex + 1);
+    if (startIndex != 0 && endIndex != 0 && startIndex < endIndex && valuePos < 10) {
+      String out = allVals.substring(startIndex, endIndex);
       float value = handleString(out);
-      values[valuePos] = value;
-      startIndex = endIndex = 0;
-      valuePos++;
+
+      if(value == 0.00) {
+        startIndex = 0;
+        endIndex = 0;
+        continue;
+      } else {
+        values[valuePos] = value;
+        startIndex = 0;
+        endIndex = 0;
+        valuePos++;
+      }
     }
   }
 
   float trueRange = stats.mode(values, valuePos, 0.1);
   // fill buffer with trueRnage;
   mobileBuffer = String(trueRange);
+
+  // Display Compensation Pixel
   displayPix(trueRange);
-// Reset Button State  
+
+  // Reset Button State  
   buttonState = 0;
 }
 void displayPix(float trueRange) {
@@ -343,13 +354,15 @@ void handleButton() {
 }
 
 float handleString(String inputString) { 
-  // See if you can avoid using buffer
-  String handler = inputString;
-  // D=XX.Xm
-  
-  handler.replace("D", "");
-  handler.replace("=", "");
-  handler.replace("m", "");
+  char buff[inputString.length()]; 
+  inputString.toCharArray(buff, inputString.length());
+  String tempBuf = "";
 
-  return handler.toFloat();
+  for(int i = 0; i < inputString.length(); i++) {
+    if(isDigit(buff[i]) || buff[i] == '.') {
+      tempBuf += buff[i];
+    }
+  }
+
+   return tempBuf.toFloat(); 
 }
